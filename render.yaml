@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: kids-app
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: SUPABASE_URL
+        value: "<set-in-render-dashboard>"
+      - key: SUPABASE_ANON_KEY
+        value: "<set-in-render-dashboard>"
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        value: "<set-in-render-dashboard>"
+      - key: NODE_VERSION
+        value: "20"
+    healthCheckPath: /
