@@ -1,76 +1,211 @@
-// Usar ruta relativa para que Vite resuelva correctamente
-import supabase from './supabaseClient.js';
+import "dotenv/config";
+import express from "express";
+import supabase from "./supabaseClient.js";
 
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('loginForm');
-    const loginButton = document.getElementById('loginButton');
-    const buttonText = document.getElementById('button-text');
-    const buttonSpinner = document.getElementById('button-spinner');
-    const errorMessageDiv = document.getElementById('error-message');
-    const errorTextSpan = document.getElementById('error-text');
+const app = express();
+app.use(express.json());
 
-    if (!loginForm) return;
+/* ===========================================================
+   ROLES
+=========================================================== */
 
-    loginForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+// GET /roles
+app.get("/roles", async (req, res) => {
+    const { data, error } = await supabase
+        .from("role")
+        .select("*");
 
-        if (loginButton instanceof HTMLButtonElement) {
-            loginButton.disabled = true;
-        }
-        buttonText.classList.add('hidden');
-        buttonSpinner.classList.remove('hidden');
-        errorMessageDiv.classList.add('hidden');
-
-        const emailInput = document.getElementById('credential');
-        const passwordInput = document.getElementById('password');
-        let email = '';
-        let password = '';
-
-        if (emailInput instanceof HTMLInputElement) {
-            email = emailInput.value;
-        }
-        if (passwordInput instanceof HTMLInputElement) {
-            password = passwordInput.value;
-        }
-
-        try {
-            // Permitir login por email o username
-            let credential = email;
-            if (credential && !credential.includes('@')) {
-                // Es un username: mapear a email vía RPC
-                const { data: mappedEmail, error: mapErr } = await supabase.rpc('get_email_by_username', { p_username: credential });
-                if (mapErr) throw mapErr;
-                if (!mappedEmail) throw new Error('Usuario no encontrado');
-                email = mappedEmail;
-            }
-
-            const { error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
-
-            if (error) {
-                throw error;
-            }
-            
-            window.location.href = '/html/dashboard.html';
-
-        } catch (error) {
-            console.error('Error de inicio de sesión:', error.message);
-            showError(error.message || 'Credenciales de inicio de sesión inválidas.');
-        } finally {
-            if (loginButton instanceof HTMLButtonElement) {
-                loginButton.disabled = false;
-                buttonText.classList.remove('hidden');
-                buttonSpinner.classList.add('hidden');
-            }
-        }
-    });
-
-    function showError(message) {
-        if (errorTextSpan && errorMessageDiv) {
-            errorTextSpan.textContent = message;
-            errorMessageDiv.classList.remove('hidden');
-        }
-    }
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
 });
+
+// GET /roles/:id
+app.get("/roles/:id", async (req, res) => {
+    const { data, error } = await supabase
+        .from("role")
+        .select("*")
+        .eq("RoleID", req.params.id)
+        .single();
+
+    if (error) return res.status(404).json({ error: "Role not found" });
+    res.json(data);
+});
+
+// POST /roles
+app.post("/roles", async (req, res) => {
+    const { RoleName, Description } = req.body;
+
+    const { data, error } = await supabase
+        .from("role")
+        .insert([{ RoleName, Description }])
+        .select();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json(data[0]);
+});
+
+// PUT /roles/:id
+app.put("/roles/:id", async (req, res) => {
+    const { RoleName, Description } = req.body;
+
+    const { data, error } = await supabase
+        .from("role")
+        .update({ RoleName, Description })
+        .eq("RoleID", req.params.id)
+        .select();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data[0]);
+});
+
+// DELETE /roles/:id
+app.delete("/roles/:id", async (req, res) => {
+    const { error } = await supabase
+        .from("role")
+        .delete()
+        .eq("RoleID", req.params.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({
+        status: "ok",
+        message: "Role deleted"
+    });
+});
+
+/* ===========================================================
+   PERMISSIONS
+=========================================================== */
+
+// GET /permissions
+app.get("/permissions", async (req, res) => {
+    const { data, error } = await supabase
+        .from("permission")
+        .select("*");
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+});
+
+// GET /permissions/:id
+app.get("/permissions/:id", async (req, res) => {
+    const { data, error } = await supabase
+        .from("permission")
+        .select("*")
+        .eq("PermissionID", req.params.id)
+        .single();
+
+    if (error) return res.status(404).json({ error: "Permission not found" });
+    res.json(data);
+});
+
+// POST /permissions
+app.post("/permissions", async (req, res) => {
+    const { PermissionName, Module, Action } = req.body;
+
+    const { data, error } = await supabase
+        .from("permission")
+        .insert([{ PermissionName, Module, Action }])
+        .select();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json(data[0]);
+});
+
+// DELETE /permissions/:id
+app.delete("/permissions/:id", async (req, res) => {
+    const { error } = await supabase
+        .from("permission")
+        .delete()
+        .eq("PermissionID", req.params.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({
+        status: "ok",
+        message: "Permission deleted"
+    });
+});
+
+/* ===========================================================
+   ROLE PERMISSIONS
+=========================================================== */
+
+// GET /role_permissions
+app.get("/role_permissions", async (req, res) => {
+    const { data, error } = await supabase
+        .from("role_permission")
+        .select("*");
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+});
+
+// GET /role_permissions/:id
+app.get("/role_permissions/:id", async (req, res) => {
+    const { data, error } = await supabase
+        .from("role_permission")
+        .select("*")
+        .eq("RolePermissionID", req.params.id)
+        .single();
+
+    if (error) return res.status(404).json({ error: "RolePermission not found" });
+    res.json(data);
+});
+
+// POST /role_permissions
+app.post("/role_permissions", async (req, res) => {
+    const { RoleID, PermissionID } = req.body;
+
+    const { data, error } = await supabase
+        .from("role_permission")
+        .insert([{ RoleID, PermissionID }])
+        .select();
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.status(201).json(data[0]);
+});
+
+// DELETE /role_permissions/:id
+app.delete("/role_permissions/:id", async (req, res) => {
+    const { error } = await supabase
+        .from("role_permission")
+        .delete()
+        .eq("RolePermissionID", req.params.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({
+        status: "ok",
+        message: "RolePermission deleted"
+    });
+});
+
+/* ===========================================================
+   GET /roles/:id/permissions  (UNIÓN REAL)
+=========================================================== */
+app.get("/roles/:id/permissions", async (req, res) => {
+    const { data, error } = await supabase
+        .from("role_permission")
+        .select(`
+            PermissionID,
+            permission:PermissionID (
+                PermissionName,
+                Module,
+                Action
+            )
+        `)
+        .eq("RoleID", req.params.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+});
+
+/* ===========================================================
+   START SERVER
+=========================================================== */
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () =>
+    console.log(`Backend running on port ${PORT}`)
+);
